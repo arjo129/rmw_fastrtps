@@ -100,7 +100,8 @@ cast_or_create_topic(
   const std::string & type_name,
   const eprosima::fastdds::dds::TopicQos & topic_qos,
   bool is_writer_topic,
-  TopicHolder * topic_holder);
+  TopicHolder * topic_holder,
+  eprosima::fastdds::dds::TopicListener * topic_listener = nullptr);
 
 /**
 * Tries to find already registered topic and type.

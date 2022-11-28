@@ -26,6 +26,7 @@
 #include "fastdds/dds/publisher/DataWriter.hpp"
 #include "fastdds/dds/publisher/DataWriterListener.hpp"
 #include "fastdds/dds/topic/Topic.hpp"
+#include "fastdds/dds/topic/TopicListener.hpp"
 #include "fastdds/dds/topic/TypeSupport.hpp"
 
 #include "fastdds/rtps/common/Guid.h"
@@ -72,6 +73,22 @@ private:
   RMWPublisherEvent * publisher_event_;
 };
 
+class CustomTopicListener final : public eprosima::fastdds::dds::TopicListener
+{
+public:
+  RMW_FASTRTPS_SHARED_CPP_PUBLIC
+  explicit CustomTopicListener(RMWPublisherEvent * pub_event);
+
+  RMW_FASTRTPS_SHARED_CPP_PUBLIC
+  void
+  on_inconsistent_topic(
+    eprosima::fastdds::dds::Topic * topic,
+    eprosima::fastdds::dds::InconsistentTopicStatus status) override;
+
+private:
+  RMWPublisherEvent * publisher_event_;
+};
+
 typedef struct CustomPublisherInfo : public CustomEventInfo
 {
   virtual ~CustomPublisherInfo() = default;
@@ -79,6 +96,7 @@ typedef struct CustomPublisherInfo : public CustomEventInfo
   eprosima::fastdds::dds::DataWriter * data_writer_{nullptr};
   RMWPublisherEvent * publisher_event_{nullptr};
   CustomDataWriterListener * data_writer_listener_{nullptr};
+  CustomTopicListener * topic_listener_{nullptr};
   eprosima::fastdds::dds::TypeSupport type_support_;
   const void * type_support_impl_{nullptr};
   rmw_gid_t publisher_gid{};
@@ -129,6 +147,9 @@ public:
     eprosima::fastdds::dds::QosPolicyId_t last_policy_id,
     uint32_t total_count, uint32_t total_count_change);
 
+  RMW_FASTRTPS_SHARED_CPP_PUBLIC
+  void update_inconsistent_topic(uint32_t total_count, uint32_t total_count_change);
+
 private:
   CustomPublisherInfo * publisher_info_ = nullptr;
 
@@ -153,6 +174,12 @@ private:
   RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
 
   eprosima::fastdds::dds::OfferedIncompatibleQosStatus incompatible_qos_status_
+  RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
+
+  bool inconsistent_topic_changed_
+  RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
+
+  eprosima::fastdds::dds::InconsistentTopicStatus inconsistent_topic_status_
   RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
 
   void trigger_event(rmw_event_type_t event_type);

@@ -78,11 +78,26 @@ void CustomDataWriterListener::on_offered_incompatible_qos(
     status.total_count_change);
 }
 
+CustomTopicListener::CustomTopicListener(RMWPublisherEvent * pub_event)
+: publisher_event_(pub_event)
+{
+}
+
+void CustomTopicListener::on_inconsistent_topic(
+  eprosima::fastdds::dds::Topic * topic,
+  eprosima::fastdds::dds::InconsistentTopicStatus status)
+{
+  (void)topic;
+
+  publisher_event_->update_inconsistent_topic(status.total_count, status.total_count_change);
+}
+
 RMWPublisherEvent::RMWPublisherEvent(CustomPublisherInfo * info)
 : publisher_info_(info),
   deadline_changed_(false),
   liveliness_changed_(false),
-  incompatible_qos_changed_(false)
+  incompatible_qos_changed_(false),
+  inconsistent_topic_changed_(false)
 {
 }
 
@@ -144,6 +159,20 @@ bool RMWPublisherEvent::take_event(
         incompatible_qos_status_.total_count_change = 0;
       }
       break;
+    case RMW_EVENT_PUBLISHER_INCONSISTENT_TOPIC:
+      {
+        auto rmw_data = static_cast<rmw_inconsistent_topic_status_t *>(event_info);
+        if (inconsistent_topic_changed_) {
+          inconsistent_topic_changed_ = false;
+        } else {
+          publisher_info_->data_writer_->get_topic()->get_inconsistent_topic_status(
+            inconsistent_topic_status_);
+        }
+        rmw_data->total_count = inconsistent_topic_status_.total_count;
+        rmw_data->total_count_change = inconsistent_topic_status_.total_count_change;
+        inconsistent_topic_status_.total_count_change = 0;
+      }
+      break;
     default:
       return false;
   }
@@ -188,6 +217,14 @@ void RMWPublisherEvent::set_on_new_event_callback(
         if (incompatible_qos_status_.total_count_change > 0) {
           callback(user_data, incompatible_qos_status_.total_count_change);
           incompatible_qos_status_.total_count_change = 0;
+        }
+        break;
+      case RMW_EVENT_PUBLISHER_INCONSISTENT_TOPIC:
+        publisher_info_->data_writer_->get_topic()->get_inconsistent_topic_status(
+          inconsistent_topic_status_);
+        if (inconsistent_topic_status_.total_count_change > 0) {
+          callback(user_data, inconsistent_topic_status_.total_count_change);
+          inconsistent_topic_status_.total_count_change = 0;
         }
         break;
       default:
@@ -278,4 +315,18 @@ void RMWPublisherEvent::trigger_event(rmw_event_type_t event_type)
   }
 
   event_guard[event_type].set_trigger_value(true);
+}
+
+void RMWPublisherEvent::update_inconsistent_topic(uint32_t total_count, uint32_t total_count_change)
+{
+  std::unique_lock<std::mutex> lock_mutex(on_new_event_m_);
+
+  // Assign absolute values
+  inconsistent_topic_status_.total_count = total_count;
+  // Accumulate deltas
+  inconsistent_topic_status_.total_count_change += total_count_change;
+
+  inconsistent_topic_changed_ = true;
+
+  trigger_event(RMW_EVENT_PUBLISHER_INCONSISTENT_TOPIC);
 }

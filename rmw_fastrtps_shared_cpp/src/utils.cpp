@@ -61,7 +61,8 @@ cast_or_create_topic(
   const std::string & type_name,
   const eprosima::fastdds::dds::TopicQos & topic_qos,
   bool is_writer_topic,
-  TopicHolder * topic_holder)
+  TopicHolder * topic_holder,
+  eprosima::fastdds::dds::TopicListener * topic_listener)
 {
   topic_holder->should_be_deleted = false;
   topic_holder->participant = participant;
@@ -72,7 +73,8 @@ cast_or_create_topic(
     topic_holder->topic = participant->create_topic(
       topic_name,
       type_name,
-      topic_qos);
+      topic_qos,
+      topic_listener);
 
     if (!topic_holder->topic) {
       return false;

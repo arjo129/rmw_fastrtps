@@ -166,6 +166,7 @@ create_subscription(
     [info, dds_participant]()
     {
       delete info->subscription_event_;
+      delete info->topic_listener_;
       delete info->data_reader_listener_;
       if (info->type_support_) {
         dds_participant->unregister_type(info->type_support_.get_type_name());
@@ -228,6 +229,13 @@ create_subscription(
     return nullptr;
   }
 
+  info->topic_listener_ = new (std::nothrow) CustomSubscriptionTopicListener(
+    info->subscription_event_);
+  if (!info->topic_listener_) {
+    RMW_SET_ERROR_MSG("create_subscription() could not create topic listener");
+    return nullptr;
+  }
+
   /////
   // Create and register Topic
   eprosima::fastdds::dds::TopicQos topic_qos = dds_participant->get_default_topic_qos();
@@ -239,7 +247,7 @@ create_subscription(
   rmw_fastrtps_shared_cpp::TopicHolder topic;
   if (!rmw_fastrtps_shared_cpp::cast_or_create_topic(
       dds_participant, des_topic,
-      topic_name_mangled, type_name, topic_qos, false, &topic))
+      topic_name_mangled, type_name, topic_qos, false, &topic, info->topic_listener_))
   {
     RMW_SET_ERROR_MSG("create_subscription() failed to create topic");
     return nullptr;

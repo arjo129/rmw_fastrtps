@@ -70,6 +70,8 @@ destroy_subscription(
 
     delete info->subscription_event_;
 
+    delete info->topic_listener_;
+
     // Delete topic and unregister type
     remove_topic_and_type(participant_info, info->topic_desc_, info->type_support_);
 

@@ -30,6 +30,7 @@
 #include "fastdds/dds/subscriber/DataReaderListener.hpp"
 #include "fastdds/dds/subscriber/qos/DataReaderQos.hpp"
 #include "fastdds/dds/topic/ContentFilteredTopic.hpp"
+#include "fastdds/dds/topic/TopicListener.hpp"
 #include "fastdds/dds/topic/TypeSupport.hpp"
 
 #include "fastdds/rtps/common/Guid.h"
@@ -85,6 +86,22 @@ private:
   RMWSubscriptionEvent * subscription_event_;
 };
 
+class CustomSubscriptionTopicListener final : public eprosima::fastdds::dds::TopicListener
+{
+public:
+  RMW_FASTRTPS_SHARED_CPP_PUBLIC
+  explicit CustomSubscriptionTopicListener(RMWSubscriptionEvent * sub_event);
+
+  RMW_FASTRTPS_SHARED_CPP_PUBLIC
+  void
+  on_inconsistent_topic(
+    eprosima::fastdds::dds::Topic * topic,
+    eprosima::fastdds::dds::InconsistentTopicStatus status) override;
+
+private:
+  RMWSubscriptionEvent * subscription_event_;
+};
+
 namespace rmw_fastrtps_shared_cpp
 {
 struct LoanManager;
@@ -97,6 +114,7 @@ struct CustomSubscriberInfo : public CustomEventInfo
   eprosima::fastdds::dds::DataReader * data_reader_ {nullptr};
   RMWSubscriptionEvent * subscription_event_{nullptr};
   CustomDataReaderListener * data_reader_listener_{nullptr};
+  CustomSubscriptionTopicListener * topic_listener_{nullptr};
   eprosima::fastdds::dds::TypeSupport type_support_;
   const void * type_support_impl_{nullptr};
   rmw_gid_t subscription_gid_{};
@@ -168,6 +186,8 @@ public:
     eprosima::fastdds::dds::QosPolicyId_t last_policy_id,
     uint32_t total_count, uint32_t total_count_change);
 
+  void update_inconsistent_topic(uint32_t total_count, uint32_t total_count_change);
+
 private:
   CustomSubscriberInfo * subscriber_info_ = nullptr;
 
@@ -193,6 +213,12 @@ private:
   RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
 
   eprosima::fastdds::dds::RequestedIncompatibleQosStatus incompatible_qos_status_
+  RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
+
+  bool inconsistent_topic_changed_
+  RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
+
+  eprosima::fastdds::dds::InconsistentTopicStatus inconsistent_topic_status_
   RCPPUTILS_TSA_GUARDED_BY(on_new_event_m_);
 
   std::set<eprosima::fastrtps::rtps::GUID_t> publishers_ RCPPUTILS_TSA_GUARDED_BY(
