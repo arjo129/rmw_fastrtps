@@ -161,7 +161,7 @@ __rmw_subscription_set_content_filter(
     // create content filtered topic
     eprosima::fastdds::dds::ContentFilteredTopic * filtered_topic = nullptr;
     if (!rmw_fastrtps_shared_cpp::create_content_filtered_topic(
-        dds_participant, info->topic_,
+        dds_participant, info->topic_desc_,
         info->topic_name_mangled_, options, &filtered_topic))
     {
       RMW_SET_ERROR_MSG("create_contentfilteredtopic() failed to create contentfilteredtopic");
@@ -171,7 +171,7 @@ __rmw_subscription_set_content_filter(
     des_topic = filtered_topic;
   } else {
     // use the existing parent topic
-    des_topic = info->topic_;
+    des_topic = info->topic_desc_;
   }
 
   // create data reader

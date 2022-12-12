@@ -69,7 +69,7 @@ destroy_subscription(
     delete info->listener_;
 
     // Delete topic and unregister type
-    remove_topic_and_type(participant_info, info->topic_, info->type_support_);
+    remove_topic_and_type(participant_info, info->topic_desc_, info->type_support_);
 
     // Delete CustomSubscriberInfo structure
     delete info;

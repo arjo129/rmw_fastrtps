@@ -234,7 +234,7 @@ create_subscription(
   info->dds_participant_ = dds_participant;
   info->subscriber_ = subscriber;
   info->topic_name_mangled_ = topic_name_mangled;
-  info->topic_ = topic.desc;
+  info->topic_desc_ = topic.desc;
   des_topic = topic.desc;
 
   // Create ContentFilteredTopic
