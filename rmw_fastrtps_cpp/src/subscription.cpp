@@ -242,6 +242,7 @@ create_subscription(
   info->dds_participant_ = dds_participant;
   info->subscriber_ = subscriber;
   info->topic_name_mangled_ = topic_name_mangled;
+  info->topic_ = topic_holder.topic;
   info->topic_desc_ = topic_holder.desc;
   des_topic = topic_holder.desc;
 
