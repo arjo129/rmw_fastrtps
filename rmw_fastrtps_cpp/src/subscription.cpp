@@ -222,10 +222,10 @@ create_subscription(
     return nullptr;
   }
 
-  rmw_fastrtps_shared_cpp::TopicHolder topic;
+  rmw_fastrtps_shared_cpp::TopicHolder topic_holder;
   if (!rmw_fastrtps_shared_cpp::cast_or_create_topic(
       dds_participant, des_topic,
-      topic_name_mangled, type_name, topic_qos, false, &topic))
+      topic_name_mangled, type_name, topic_qos, false, &topic_holder))
   {
     RMW_SET_ERROR_MSG("create_subscription() failed to create topic");
     return nullptr;
@@ -234,8 +234,8 @@ create_subscription(
   info->dds_participant_ = dds_participant;
   info->subscriber_ = subscriber;
   info->topic_name_mangled_ = topic_name_mangled;
-  info->topic_desc_ = topic.desc;
-  des_topic = topic.desc;
+  info->topic_desc_ = topic_holder.desc;
+  des_topic = topic_holder.desc;
 
   // Create ContentFilteredTopic
   if (subscription_options->content_filter_options) {
@@ -338,7 +338,7 @@ create_subscription(
   rmw_fastrtps_shared_cpp::__init_subscription_for_loans(rmw_subscription);
   rmw_subscription->is_cft_enabled = info->filtered_topic_ != nullptr;
 
-  topic.should_be_deleted = false;
+  topic_holder.should_be_deleted = false;
   cleanup_rmw_subscription.cancel();
   cleanup_datareader.cancel();
   cleanup_info.cancel();
