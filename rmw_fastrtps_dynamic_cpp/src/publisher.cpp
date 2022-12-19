@@ -163,7 +163,8 @@ rmw_fastrtps_dynamic_cpp::create_publisher(
 
   auto cleanup_info = rcpputils::make_scope_exit(
     [info, dds_participant]() {
-      delete info->listener_;
+      delete info->publisher_event_;
+      delete info->data_writer_listener_;
       if (info->type_support_) {
         dds_participant->unregister_type(info->type_support_.get_type_name());
       }
@@ -206,10 +207,15 @@ rmw_fastrtps_dynamic_cpp::create_publisher(
 
   /////
   // Create Listener
-  info->listener_ = new (std::nothrow) PubListener(info);
+  info->publisher_event_ = new (std::nothrow) RMWPublisherEvent(info);
+  if (!info->publisher_event_) {
+    RMW_SET_ERROR_MSG("create_publisher() could not create publisher event");
+    return nullptr;
+  }
 
-  if (!info->listener_) {
-    RMW_SET_ERROR_MSG("create_publisher() could not create publisher listener");
+  info->data_writer_listener_ = new (std::nothrow) CustomDataWriterListener(info->publisher_event_);
+  if (!info->data_writer_listener_) {
+    RMW_SET_ERROR_MSG("create_publisher() could not create publisher data writer listener");
     return nullptr;
   }
 
@@ -268,7 +274,7 @@ rmw_fastrtps_dynamic_cpp::create_publisher(
   info->data_writer_ = publisher->create_datawriter(
     topic.topic,
     writer_qos,
-    info->listener_,
+    info->data_writer_listener_,
     eprosima::fastdds::dds::StatusMask::publication_matched());
 
   if (!info->data_writer_) {
