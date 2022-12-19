@@ -165,7 +165,8 @@ create_subscription(
   auto cleanup_info = rcpputils::make_scope_exit(
     [info, dds_participant]()
     {
-      delete info->listener_;
+      delete info->subscription_event_;
+      delete info->data_reader_listener_;
       if (info->type_support_) {
         dds_participant->unregister_type(info->type_support_.get_type_name());
       }
@@ -208,9 +209,16 @@ create_subscription(
 
   /////
   // Create Listener
-  info->listener_ = new (std::nothrow) SubListener(info);
-  if (!info->listener_) {
-    RMW_SET_ERROR_MSG("create_subscription() could not create subscription listener");
+  info->subscription_event_ = new (std::nothrow) RMWSubscriptionEvent(info);
+  if (!info->subscription_event_) {
+    RMW_SET_ERROR_MSG("create_subscription() could not create subscription event");
+    return nullptr;
+  }
+
+  info->data_reader_listener_ =
+    new (std::nothrow) CustomDataReaderListener(info->subscription_event_);
+  if (!info->data_reader_listener_) {
+    RMW_SET_ERROR_MSG("create_subscription() could not create subscription data reader listener");
     return nullptr;
   }
 
@@ -288,7 +296,7 @@ create_subscription(
       subscription_options,
       subscriber,
       des_topic,
-      info->listener_,
+      info->data_reader_listener_,
       &info->data_reader_))
   {
     RMW_SET_ERROR_MSG("create_datareader() could not create data reader");
