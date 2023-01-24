@@ -164,6 +164,7 @@ rmw_fastrtps_dynamic_cpp::create_publisher(
   auto cleanup_info = rcpputils::make_scope_exit(
     [info, dds_participant]() {
       delete info->publisher_event_;
+      delete info->topic_listener_;
       delete info->data_writer_listener_;
       if (info->type_support_) {
         dds_participant->unregister_type(info->type_support_.get_type_name());
@@ -219,6 +220,12 @@ rmw_fastrtps_dynamic_cpp::create_publisher(
     return nullptr;
   }
 
+  info->topic_listener_ = new (std::nothrow) CustomTopicListener(info->publisher_event_);
+  if (!info->topic_listener_) {
+    RMW_SET_ERROR_MSG("create_publisher() could not create topic listener");
+    return nullptr;
+  }
+
   /////
   // Create and register Topic
   eprosima::fastdds::dds::TopicQos topic_qos = dds_participant->get_default_topic_qos();
@@ -231,7 +238,7 @@ rmw_fastrtps_dynamic_cpp::create_publisher(
   rmw_fastrtps_shared_cpp::TopicHolder topic;
   if (!rmw_fastrtps_shared_cpp::cast_or_create_topic(
       dds_participant, des_topic,
-      topic_name_mangled, type_name, topic_qos, true, &topic))
+      topic_name_mangled, type_name, topic_qos, true, &topic, info->topic_listener_))
   {
     RMW_SET_ERROR_MSG("create_publisher() failed to create topic");
     return nullptr;
